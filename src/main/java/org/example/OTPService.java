@@ -3,38 +3,66 @@ package org.example;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import java.util.Scanner;
 
 public class OTPService {
-    private final Map<String, Integer> otpCache = new HashMap<>();
+    private static final String SENDER_EMAIL = "aniketchourasiya1632000@gmail.com";
+    private static final String SENDER_PASSWORD = "iieg irch mlpr akdv";
+    private Map<String, String> otpStore = new HashMap<>();
 
-    public boolean authenticateWithOTP(String senderEmail) {
-        Scanner scanner = new Scanner(System.in);
+    public boolean sendOTP(String email) {
+        try {
+            String otp = generateOTP();
+            otpStore.put(email, otp);
 
-        // Check if OTP has already been sent to the senderEmail
-        if (!otpCache.containsKey(senderEmail)) {
-            int otp = generateOTP(); // Generate a new OTP
-            otpCache.put(senderEmail, otp);
+            EmailService tempEmailService = new EmailService(SENDER_EMAIL, SENDER_PASSWORD);
+            String subject = "Your OTP for Email Approval System";
+            String message = "<html><body>" +
+                    "<h2>Email Approval System - OTP Verification</h2>" +
+                    "<p>Your OTP is: <b style='font-size: 24px;'>" + otp + "</b></p>" +
+                    "<p>This OTP will expire in 5 minutes.</p>" +
+                    "</body></html>";
 
-            // Simulate sending OTP via Email
-            EmailService emailService = new EmailService("aniketchourasiya1632000@gmail.com", "iieg irch mlpr akdv");
-            emailService.sendEmail(senderEmail, "OTP for Authentication", "Your OTP is: " + otp);
+            boolean emailSent = tempEmailService.sendEmail(email, subject, message);
+            if (!emailSent) {
+                System.out.println(" if (!emailSent) is false hence red txt");
+                otpStore.remove(email);  // Remove OTP if email failed
+                return false;
+            }
 
-            System.out.println("📧 OTP has been sent to your email.");
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
-
-        System.out.print("Enter the OTP sent to your email: ");
-        int enteredOtp = scanner.nextInt();
-
-        return validateOTP(senderEmail, enteredOtp);
     }
 
-    private int generateOTP() {
+    public boolean verifyOTP(String email, String userInputOTP) {
+        String storedOTP = otpStore.get(email);
+        if (!otpStore.isEmpty()) {  // Check if the map is not empty
+            otpStore.forEach((key, value) -> {
+                System.out.println("--Email: " + key + ", OTP: " + value);
+            });
+        } else {
+            System.out.println("The OTP store is empty.");
+        }
+        System.out.println("--Verifying OTP for email: " + email);
+        System.out.println("--User input OTP: " + userInputOTP + " | Stored OTP: " + storedOTP); // Debugging
+        if (storedOTP != null && storedOTP.equals(userInputOTP)) {
+            otpStore.remove(email); // Remove used OTP
+            return true;
+        }
+        return false;
+    }
+
+    private String generateOTP() {
         Random random = new Random();
-        return 100000 + random.nextInt(900000); // Generate a 6-digit OTP
+        int rand = random.nextInt(1000000);
+        System.out.println("Otp is = "+rand);
+        return String.format("%06d", rand);
     }
 
-    private boolean validateOTP(String senderEmail, int enteredOtp) {
-        return otpCache.getOrDefault(senderEmail, -1) == enteredOtp;
+    // Getter for sender email (for display purposes)
+    public static String getSenderEmail() {
+        return SENDER_EMAIL;
     }
 }

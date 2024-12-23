@@ -27,7 +27,7 @@ public class EmailService {
         });
     }
 
-    public void sendEmail(String recipientEmail, String subject, String htmlContent) {
+    public boolean sendEmail(String recipientEmail, String subject, String htmlContent) {
         try {
             Session session = createSession();
             Message message = new MimeMessage(session);
@@ -38,8 +38,23 @@ public class EmailService {
 
             Transport.send(message);
             System.out.println("📧 Email sent successfully to " + recipientEmail);
+            return true;
         } catch (MessagingException e) {
             System.err.println("❌ Failed to send email: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public boolean testConnection() {
+        try {
+            Session session = createSession();
+            Transport transport = session.getTransport("smtp");
+            transport.connect("smtp.gmail.com", senderEmail, senderPassword);
+            transport.close();
+            return true;
+        } catch (MessagingException e) {
+            System.err.println("Connection test failed: " + e.getMessage());
+            return false;
         }
     }
 }
