@@ -11,16 +11,13 @@
   <url>http://maven.apache.org</url>
 
   <properties>
-    <!-- Set the encoding for your project -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-    <!-- Set Java source and target versions to 22 -->
     <maven.compiler.source>22</maven.compiler.source>
     <maven.compiler.target>22</maven.compiler.target>
   </properties>
 
   <dependencies>
-    <!-- JUnit Dependency (Updated to JUnit 5) -->
+    <!-- JUnit Dependency -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
@@ -54,17 +51,32 @@
       <artifactId>mysql-connector-java</artifactId>
       <version>5.1.37</version>
     </dependency>
-  </dependencies>
 
-  <dependency>
-    <groupId>com.sun.mail</groupId>
-    <artifactId>javax.mail</artifactId>
-    <version>1.6.2</version>
-  </dependency>
+    <!-- Google API Dependencies -->
+    <dependency>
+      <groupId>com.google.api-client</groupId>
+      <artifactId>google-api-client</artifactId>
+      <version>1.36.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.oauth-client</groupId>
+      <artifactId>google-oauth-client-jetty</artifactId>
+      <version>1.36.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.apis</groupId>
+      <artifactId>google-api-services-gmail</artifactId>
+      <version>v1-rev20230325-2.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.http-client</groupId>
+      <artifactId>google-http-client-jackson2</artifactId>
+      <version>1.41.5</version>
+    </dependency>
+  </dependencies>
 
   <build>
     <plugins>
-      <!-- Maven Compiler Plugin Configuration for JDK 22 -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>

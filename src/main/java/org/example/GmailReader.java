@@ -47,13 +47,13 @@ public class GmailReader {
                     // Check for approval or rejection
                     if (content.contains("approve")) {
                         status = "Approved";
-                        DatabaseUtils.saveEmailToDatabase(recipientEmail, subject, status, timestamp);
+                        //DatabaseUtils.saveEmailToDatabase(recipientEmail, subject, status, timestamp);
                         System.out.println("✅ Approval Received!   ");
 
                         return true;
                     } else if (content.contains("reject")) {
                         status = "Rejected";
-                        DatabaseUtils.saveEmailToDatabase(recipientEmail, subject, status, timestamp);
+                       // DatabaseUtils.saveEmailToDatabase(recipientEmail, subject, status, timestamp);
                         System.out.println("❌ Rejection Received!");
                         return true;
                     }
