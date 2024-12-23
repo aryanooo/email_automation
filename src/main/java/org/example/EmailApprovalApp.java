@@ -1,5 +1,6 @@
 package org.example;
-
+import java.sql.Timestamp;
+import java.util.Scanner;
 public class EmailApprovalApp {
     public static void main(String args[])
     {
@@ -42,7 +43,7 @@ public class EmailApprovalApp {
 
             System.out.println("⏳ Waiting for recipient's response...");
             try {
-                Thread.sleep(20000); // Wait for 20 seconds
+                Thread.sleep(60000); // Wait for 20 seconds
             } catch (InterruptedException e) {
                 System.err.println("⚠️ Error while waiting: " + e.getMessage());
             }
@@ -78,4 +79,4 @@ public class EmailApprovalApp {
     }
 
 }
-}
+
