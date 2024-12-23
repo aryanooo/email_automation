@@ -1,5 +1,4 @@
 package org.example;
-import java.sql.Timestamp;
 import javax.mail.*;
 import javax.mail.internet.MimeMultipart;
 import javax.mail.search.FlagTerm;
@@ -13,81 +12,88 @@ public class GmailReader {
         this.appPassword = appPassword;
     }
 
-    // Checks for approval or rejection response
-    public boolean checkForApprovalResponse(String recipientEmail) {
+    // Add the ApprovalResponse class
+    public static class ApprovalResponse {
+        private final boolean received;
+        private final boolean approved;
+        private final String message;
+
+        public ApprovalResponse(boolean received, boolean approved, String message) {
+            this.received = received;
+            this.approved = approved;
+            this.message = message;
+        }
+
+        public boolean isReceived() { return received; }
+        public boolean isApproved() { return approved; }
+        public String getMessage() { return message; }
+    }
+
+    // Add the new detailed method
+    public ApprovalResponse checkForApprovalResponseDetailed(String recipientEmail) {
         Properties props = new Properties();
         props.put("mail.store.protocol", "imaps");
         props.put("mail.imaps.host", "imap.gmail.com");
         props.put("mail.imaps.port", "993");
         props.put("mail.imaps.ssl.enable", "true");
 
-        try (Store store = Session.getInstance(props).getStore("imaps")) {
+        try {
+            Session session = Session.getInstance(props);
+            Store store = session.getStore("imaps");
             store.connect("imap.gmail.com", userEmail, appPassword);
 
             Folder inbox = store.getFolder("INBOX");
             inbox.open(Folder.READ_WRITE);
 
-            // Search for unread emails
             Message[] messages = inbox.search(new FlagTerm(new Flags(Flags.Flag.SEEN), false));
+            System.out.println("Found " + messages.length + " unread messages");
 
-            for (Message message : messages) {
-                // Check if email is from the expected sender
+            // Check the last 10 unread messages or fewer if less than 10
+            int messagesToCheck = Math.min(10, messages.length);
+            for (int i = messages.length - 1; i >= messages.length - messagesToCheck; i--) {
+                Message message = messages[i];
                 if (message.getFrom()[0].toString().contains(recipientEmail)) {
                     String subject = message.getSubject();
-                    String content = getTextFromMessage(message).toLowerCase();
-                    Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+                    if (subject != null && subject.contains("Approval")) {
+                        String content = getMessageContent(message);
+                        message.setFlag(Flags.Flag.SEEN, true);
 
-                    String status;
-                    // Print the full response
-                    System.out.println("\n=== Response Details ===");
-                    System.out.println("Sender: " + message.getFrom()[0]);
-                    System.out.println("Subject: " + subject);
-                    System.out.println("Body: " + content);
-
-                    // Check for approval or rejection
-                    if (content.contains("approve")) {
-                        status = "Approved";
-                        //DatabaseUtils.saveEmailToDatabase(recipientEmail, subject, status, timestamp);
-                        System.out.println("✅ Approval Received!   ");
-
-                        return true;
-                    } else if (content.contains("reject")) {
-                        status = "Rejected";
-                       // DatabaseUtils.saveEmailToDatabase(recipientEmail, subject, status, timestamp);
-                        System.out.println("❌ Rejection Received!");
-                        return true;
+                        if (content.contains("Approved")) {
+                            return new ApprovalResponse(true, true, "✅ Approved by " + recipientEmail);
+                        } else if (content.contains("Rejected")) {
+                            return new ApprovalResponse(true, false, "❌ Rejected by " + recipientEmail);
+                        }
                     }
                 }
             }
+
+            inbox.close(false);
+            store.close();
+
         } catch (Exception e) {
-            System.err.println("❌ Error reading emails: " + e.getMessage());
+            System.err.println("Error checking mailbox: " + e.getMessage());
+            e.printStackTrace();
+            return new ApprovalResponse(false, false, "Error: " + e.getMessage());
         }
 
-        return false;
+        return new ApprovalResponse(false, false, "No response yet");
     }
 
-
-    // Helper method to extract text from email content
-    private String getTextFromMessage(Message message) throws Exception {
-        if (message.isMimeType("text/plain")) {
-            return message.getContent().toString();
-        } else if (message.isMimeType("text/html")) {
-            return message.getContent().toString();
-        } else if (message.isMimeType("multipart/*")) {
-            MimeMultipart mimeMultipart = (MimeMultipart) message.getContent();
-            return getTextFromMimeMultipart(mimeMultipart);
+    private String getMessageContent(Message message) throws Exception {
+        Object content = message.getContent();
+        if (content instanceof String) {
+            return (String) content;
+        } else if (content instanceof MimeMultipart) {
+            return getTextFromMimeMultipart((MimeMultipart) content);
         }
-        return "Unsupported content type.";
+        return "";
     }
 
-    // Helper method to extract text from MimeMultipart
     private String getTextFromMimeMultipart(MimeMultipart mimeMultipart) throws Exception {
         StringBuilder result = new StringBuilder();
         for (int i = 0; i < mimeMultipart.getCount(); i++) {
             BodyPart bodyPart = mimeMultipart.getBodyPart(i);
             if (bodyPart.isMimeType("text/plain")) {
-                result.append(bodyPart.getContent());
-            } else if (bodyPart.isMimeType("text/html")) {
                 result.append(bodyPart.getContent());
             }
         }

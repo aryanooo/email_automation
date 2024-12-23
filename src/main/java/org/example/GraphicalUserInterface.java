@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import org.example.GmailReader.ApprovalResponse;
 
 public class GraphicalUserInterface extends JFrame implements ActionListener {
     private static final String SENDER_EMAIL = "aniketchourasiya1632000@gmail.com";
@@ -51,13 +52,13 @@ public class GraphicalUserInterface extends JFrame implements ActionListener {
         statusLabel = new JLabel("Click 'Generate OTP' to start verification");
         statusLabel.setForeground(Color.BLUE);
 
-        JLabel instructionLabel = new JLabel("Enter OTP:");//txt label
+        JLabel instructionLabel = new JLabel("Enter OTP:");
         otpField = new JTextField(6);
         otpField.setMaximumSize(new Dimension(150, 30));
-        otpField.setFont(new Font("Monospaced", Font.PLAIN, 20));//blank space
+        otpField.setFont(new Font("Monospaced", Font.PLAIN, 20));
         otpField.setHorizontalAlignment(JTextField.CENTER);
 
-        verifyOTPButton = new JButton("Verify OTP");//verify otp button
+        verifyOTPButton = new JButton("Verify OTP");
         verifyOTPButton.addActionListener(this);
 
         emailLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -100,11 +101,20 @@ public class GraphicalUserInterface extends JFrame implements ActionListener {
         statusLabel.setForeground(Color.BLUE);
 
         new Thread(() -> {
+            if (!emailService.testConnection()) {
+                SwingUtilities.invokeLater(() -> {
+                    statusLabel.setText("Failed to connect to email service. Check credentials.");
+                    statusLabel.setForeground(Color.RED);
+                    generateOTPButton.setEnabled(true);
+                });
+                return;
+            }
+
             boolean otpSent = otpService.sendOTP(SENDER_EMAIL);
 
             SwingUtilities.invokeLater(() -> {
                 if (otpSent) {
-                    statusLabel.setText("OTP sent successfully!");
+                    statusLabel.setText("OTP sent successfully! Check your email.");
                     statusLabel.setForeground(Color.GREEN);
                 } else {
                     statusLabel.setText("Failed to send OTP. Try again.");
@@ -173,18 +183,24 @@ public class GraphicalUserInterface extends JFrame implements ActionListener {
     private void showProgressWindow(String recipient, String subject, String message) {
         setTitle("Approval Progress");
         getContentPane().removeAll();
-        setSize(400, 300);
+        setSize(400, 400);
         setLocationRelativeTo(null);
 
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
+        JLabel statusLabel = new JLabel("Waiting for response...");
+        statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        statusLabel.setForeground(Color.BLUE);
+        panel.add(statusLabel);
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+
         JTextArea progressArea = new JTextArea(10, 30);
         progressArea.setEditable(false);
         JScrollPane scrollPane = new JScrollPane(progressArea);
-
         panel.add(scrollPane);
+
         getContentPane().add(panel);
         revalidate();
         repaint();
@@ -198,17 +214,75 @@ public class GraphicalUserInterface extends JFrame implements ActionListener {
                 updateProgress(progressArea, "\n🔄 Attempt " + attempt + " to send email...");
                 emailService.sendEmail(recipient, subject, htmlContent);
 
+                int finalAttempt = attempt;
+                SwingUtilities.invokeLater(() ->
+                        statusLabel.setText("Checking for response (Attempt " + finalAttempt + "/" + maxAttempts + ")"));
+
                 updateProgress(progressArea, "⏳ Waiting for recipient's response...");
                 try {
                     Thread.sleep(40000);
-                    responseReceived = gmailReader.checkForApprovalResponse(recipient);
+                    System.out.println("\n--- Starting attempt " + attempt + " to check for response ---");
+
+                    SwingUtilities.invokeLater(() -> {
+                        statusLabel.setText("Checking email for response...");
+                        statusLabel.setForeground(Color.BLUE);
+                    });
+
+                    ApprovalResponse response = gmailReader.checkForApprovalResponseDetailed(recipient);
+                    System.out.println("Response received: " + response.isReceived());
+                    System.out.println("Response message: " + response.getMessage());
+
+                    if (response.isReceived()) {
+                        responseReceived = true;
+
+                        SwingUtilities.invokeLater(() -> {
+                            statusLabel.setText(response.getMessage());
+                            statusLabel.setForeground(response.isApproved() ? Color.GREEN : Color.RED);
+
+                            updateProgress(progressArea, "\n" + response.getMessage());
+                            updateProgress(progressArea, "\n✨ Process completed successfully!");
+
+                            JButton newApprovalButton = new JButton("Start New Approval");
+                            newApprovalButton.addActionListener(e -> showEmailCompositionWindow());
+                            panel.add(Box.createRigidArea(new Dimension(0, 10)));
+                            panel.add(newApprovalButton);
+                            panel.revalidate();
+                            panel.repaint();
+                        });
+                        break;
+                    } else {
+                        System.out.println("No response detected in attempt " + attempt);
+                        int finalAttempt1 = attempt;
+                        SwingUtilities.invokeLater(() -> {
+                            statusLabel.setText("No response detected (Attempt " + finalAttempt1 + "/" + maxAttempts + ")");
+                            statusLabel.setForeground(Color.ORANGE);
+                        });
+                        updateProgress(progressArea, "\nNo response detected yet...");
+                    }
                 } catch (InterruptedException e) {
+                    System.err.println("Error during wait period: " + e.getMessage());
+                    SwingUtilities.invokeLater(() -> {
+                        statusLabel.setText("Error occurred while checking!");
+                        statusLabel.setForeground(Color.RED);
+                    });
                     updateProgress(progressArea, "⚠️ Error while waiting: " + e.getMessage());
                 }
             }
 
             if (!responseReceived) {
-                updateProgress(progressArea, "❌ No response received after " + maxAttempts + " attempts.");
+                System.out.println("All attempts completed without response");
+                SwingUtilities.invokeLater(() -> {
+                    statusLabel.setText("No response received after all attempts");
+                    statusLabel.setForeground(Color.RED);
+                    updateProgress(progressArea, "\n❌ No response received after " + maxAttempts + " attempts.");
+
+                    JButton retryButton = new JButton("Retry Approval Process");
+                    retryButton.addActionListener(e -> showProgressWindow(recipient, subject, message));
+                    panel.add(Box.createRigidArea(new Dimension(0, 10)));
+                    panel.add(retryButton);
+                    panel.revalidate();
+                    panel.repaint();
+                });
             }
         }).start();
     }
@@ -240,7 +314,11 @@ public class GraphicalUserInterface extends JFrame implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == verifyOTPButton) {
             String userInputOTP = otpField.getText().trim();
+            System.out.println("Verifying OTP: " + userInputOTP);
+
             if (otpService.verifyOTP(SENDER_EMAIL, userInputOTP)) {
+                statusLabel.setText("OTP verified successfully!");
+                statusLabel.setForeground(Color.GREEN);
                 showEmailCompositionWindow();
             } else {
                 statusLabel.setText("Invalid OTP. Please try again.");
@@ -251,6 +329,16 @@ public class GraphicalUserInterface extends JFrame implements ActionListener {
 
     private void showError(String message) {
         JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+
+    private JButton createButton(String text) {
+        JButton button = new JButton(text);
+        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.setBackground(Color.LIGHT_GRAY);
+        button.setForeground(Color.BLACK);
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY));
+        return button;
     }
 
     public static void main(String[] args) {
