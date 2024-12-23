@@ -183,7 +183,7 @@ public class GraphicalUserInterface extends JFrame implements ActionListener {
     private void showProgressWindow(String recipient, String subject, String message) {
         setTitle("Approval Progress");
         getContentPane().removeAll();
-        setSize(400, 400);
+        setSize(450, 400);
         setLocationRelativeTo(null);
 
         JPanel panel = new JPanel();
@@ -196,7 +196,7 @@ public class GraphicalUserInterface extends JFrame implements ActionListener {
         panel.add(statusLabel);
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        JTextArea progressArea = new JTextArea(10, 30);
+        JTextArea progressArea = new JTextArea(15, 40);
         progressArea.setEditable(false);
         JScrollPane scrollPane = new JScrollPane(progressArea);
         panel.add(scrollPane);
@@ -220,7 +220,7 @@ public class GraphicalUserInterface extends JFrame implements ActionListener {
 
                 updateProgress(progressArea, "⏳ Waiting for recipient's response...");
                 try {
-                    Thread.sleep(40000);
+                    Thread.sleep(5000);
                     System.out.println("\n--- Starting attempt " + attempt + " to check for response ---");
 
                     SwingUtilities.invokeLater(() -> {
@@ -242,10 +242,10 @@ public class GraphicalUserInterface extends JFrame implements ActionListener {
                             updateProgress(progressArea, "\n" + response.getMessage());
                             updateProgress(progressArea, "\n✨ Process completed successfully!");
 
-                            JButton newApprovalButton = new JButton("Start New Approval");
-                            newApprovalButton.addActionListener(e -> showEmailCompositionWindow());
-                            panel.add(Box.createRigidArea(new Dimension(0, 10)));
-                            panel.add(newApprovalButton);
+
+                            JButton doneButton = new JButton("Done");
+                            doneButton.addActionListener(e -> dispose());
+                            panel.add(doneButton);
                             panel.revalidate();
                             panel.repaint();
                         });
@@ -300,10 +300,10 @@ public class GraphicalUserInterface extends JFrame implements ActionListener {
                 "<h3>" + bodyMessage + "</h3>" +
                 "<p style=\"text-align:center;\">" +
                 "<a href=\"mailto:" + senderEmail +
-                "?subject=Approval Response&body=Your%20changes%20are%20Approved%20by%20Client\" " +
+                "?subject=Response&body=Your%20changes%20are%20Approved%20by%20Client\" " +
                 "style=\"padding:10px;background-color:green;color:white;text-decoration:none;border-radius:5px;display:inline-block;margin-right:20px;\">Approve</a>" +
                 "<a href=\"mailto:" + senderEmail +
-                "?subject=Approval Response&body=Your%20changes%20are%20Rejected%20by%20Client\" " +
+                "?subject=Response&body=Your%20changes%20are%20Rejected%20by%20Client\" " +
                 "style=\"padding:10px;background-color:red;color:white;text-decoration:none;border-radius:5px;display:inline-block;\">Reject</a>" +
                 "</p>" +
                 "</body>" +

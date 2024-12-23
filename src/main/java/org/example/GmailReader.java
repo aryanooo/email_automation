@@ -29,6 +29,12 @@ public class GmailReader {
         public String getMessage() { return message; }
     }
 
+    // Keep the existing method for backward compatibility
+    public boolean checkForApprovalResponse(String recipientEmail) {
+        ApprovalResponse response = checkForApprovalResponseDetailed(recipientEmail);
+        return response.isReceived() && response.isApproved();
+    }
+
     // Add the new detailed method
     public ApprovalResponse checkForApprovalResponseDetailed(String recipientEmail) {
         Properties props = new Properties();
@@ -48,13 +54,11 @@ public class GmailReader {
             Message[] messages = inbox.search(new FlagTerm(new Flags(Flags.Flag.SEEN), false));
             System.out.println("Found " + messages.length + " unread messages");
 
-            // Check the last 10 unread messages or fewer if less than 10
-            int messagesToCheck = Math.min(10, messages.length);
-            for (int i = messages.length - 1; i >= messages.length - messagesToCheck; i--) {
+            for (int i = messages.length - 1; i >= 0; i--) {
                 Message message = messages[i];
                 if (message.getFrom()[0].toString().contains(recipientEmail)) {
                     String subject = message.getSubject();
-                    if (subject != null && subject.contains("Approval")) {
+                    if (subject != null && subject.contains("Response")) {
                         String content = getMessageContent(message);
                         message.setFlag(Flags.Flag.SEEN, true);
 
@@ -99,6 +103,7 @@ public class GmailReader {
         }
         return result.toString();
     }
+
 }
 
 
